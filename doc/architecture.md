@@ -26,7 +26,7 @@ flowchart TB
     end
 
     subgraph ClientLayer["Presentation & Application Layer"]
-        NextWebClient["Next.js Web Frontend (Chatbot UI)<br/>(App Router, React 19, Tailwind CSS)"]
+        NextWebClient["Next.js Web Frontend (Chatbot UI & Diagnostic Explorer)<br/>(App Router, React 19, Tailwind CSS)"]
         NextBFF["Next.js Route Handlers / BFF<br/>(app/api/chat, app/api/documents)"]
         CLIClient["CLI Interface (Interactive / Batch)"]
         APIGateway["FastAPI Gateway<br/>(/v1/chat, /v1/chat/stream, /v1/documents)"]
@@ -394,7 +394,12 @@ When retrieved chunks originate from multiple documents (e.g., cooking oils or f
 <Chunks from Eatwell Guide regarding choosing unsaturated oils and spreads in small amounts>
 ```
 
-### 4.5 Step 5: Grounded Synthesis & Citation Attribution Engine
+### 4.5 Step 5: Grounded Synthesis & Citation Attribution Engine (Groq LPU Orchestration)
+The LLM synthesis layer leverages **Groq API** acceleration (LPU inference engine) orchestrating open models:
+- **Primary Production Model**: `openai/gpt-oss-120b` (robust reasoning, strict adherence to negative constraints, high zero-shot grounding).
+- **High-Efficiency Alternative**: `qwen/qwen3.6-27b` (ultra-fast sub-30ms TTFT, strong multi-lingual and structured tabular parsing).
+- **Secondary / Fallback Model**: Google Gemini API (`gemini-2.5-flash`).
+
 The LLM synthesizer generates the final response subject to strict negative constraints:
 
 #### System Prompt Template:
@@ -595,6 +600,43 @@ while (reader) {
    - Citation pills are focusable buttons (`tabindex="0"`) with clear focus rings.
    - The Citation Drawer implements an accessible focus trap with `Escape` key close handlers (via Radix UI Dialog / Sheet).
 3. **WCAG 2.1 AA Color Contrast**: All amber and rose refusal cards maintain a minimum 4.5:1 text-to-background contrast ratio in both Light and Dark display modes.
+
+### 5.6 Developer Diagnostic & Corpus Explorer Architecture (`/explorer`)
+To completely eliminate duplicate Python UI frameworks (such as Streamlit) and maintain a single unified TypeScript/React codebase, the Next.js frontend integrates a dedicated internal diagnostic workspace mounted at `app/explorer/page.tsx`:
+
+```mermaid
+flowchart TD
+    subgraph ExplorerApp["React 19 Diagnostic Explorer (/explorer)"]
+        TabSelector["Multi-Tab Navigation Bar"]
+        Tab1["BlockExplorer.tsx<br/>Browse 1,001 raw blocks by doc & type"]
+        Tab2["ChunkInspector.tsx<br/>Inspect assembled chunks, hierarchy & tables"]
+        Tab3["RetrievalDebugger.tsx<br/>Test query similarity & threshold (tau=0.53)"]
+        Tab4["GuardrailDebugger.tsx<br/>Test regex pattern matching & safety filters"]
+    end
+
+    TabSelector --> Tab1
+    TabSelector --> Tab2
+    TabSelector --> Tab3
+    TabSelector --> Tab4
+
+    Tab1 --> FastAPIDocs["BFF /api/documents & /v1/documents"]
+    Tab3 --> FastAPIChat["BFF /api/chat & /v1/chat"]
+```
+
+1. **Block Explorer (`BlockExplorer.tsx`)**:
+   - Interactive document selection across all 7 corpus publications.
+   - Filterable table displaying raw records from `data/blocks.jsonl` by `type` (`table`, `heading`, `paragraph`, `list_item`).
+   - Table block modal preview verifying zero cell truncation and clean Markdown representation.
+2. **Chunk Inspector (`ChunkInspector.tsx`)**:
+   - Displays chunk boundaries, exact token counts, and parent `heading_path` breadcrumb hierarchies.
+   - Visual badges for atomic intact tables and sub-table split groups.
+3. **Retrieval & Similarity Debugger (`RetrievalDebugger.tsx`)**:
+   - Real-time search query sandbox allowing selection between Global and Scoped retrieval.
+   - Interactive visual indicator comparing query cosine similarity scores against calibrated threshold ($\tau = 0.53$).
+   - Displays top-$K$ candidate chunks, rank ordering, and document provenance badges.
+4. **Guardrail Sandbox (`GuardrailDebugger.tsx`)**:
+   - Live regex matcher evaluating user prompts against medical diagnosis, calorie counting, and weight loss restriction patterns.
+   - Highlights triggering substring tokens with instant explanation of refusal policy.
 
 ---
 
@@ -961,11 +1003,14 @@ export async function POST(req: NextRequest) {
 | **Data Source** | Local `data/blocks.jsonl` | Web scraping, live PDF parsing | Eliminates network latency, parsing flakiness, and legal/scraping rate limits. Guaranteed reproducibility with 1,001 canonical pre-parsed blocks. |
 | **Vector Database** | `ChromaDB` (Embedded) | `FAISS`, `Qdrant` | Lightweight, native metadata filtering on `document_id`, local persistent storage, zero Docker setup required. |
 | **Embedding Model** | `all-MiniLM-L6-v2` or `text-embedding-3-small` | `bge-large-en` | Fast local inference, robust semantic alignment with public health prose. |
-| **LLM Synthesis** | Google Gemini API (`gemini-2.5-flash` / `gemini-1.5-pro`) | Claude 3.5 Sonnet, GPT-4o | Outstanding instruction following for negative constraints, streaming token support, and strict citation formatting. |
+| **LLM Synthesis & Orchestration** | **Groq API** (`openai/gpt-oss-120b` / `qwen/qwen3.6-27b`) | Google Gemini (`gemini-2.5-flash`), Claude 3.5 Sonnet, GPT-4o | Sub-30ms TTFT via Groq LPUs, open weights transparency, outstanding instruction following for negative constraints, real-time token streaming, and strict citation formatting. *(Gemini retained as secondary/legacy fallback)*. |
 | **API Framework** | `FastAPI` + `Pydantic v2` | Flask | Asynchronous, typed endpoints with automatic OpenAPI documentation and native SSE streaming. |
-| **User Interface** | **Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS** | Streamlit | Production-grade web architecture, sub-second TTFB with React Server Components, real-time SSE streaming, accessible interactive citation flyout drawers, multi-document tabbed comparisons, and responsive desktop/mobile layouts. *(Streamlit retained as optional internal diagnostic tool)*. |
+| **User Interface** | **Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS** | Streamlit *(Rejected)* | Production-grade web architecture, sub-second TTFB with React Server Components, real-time SSE streaming, accessible interactive citation flyout drawers, multi-document tabbed comparisons, and responsive desktop/mobile layouts. Replaces Streamlit entirely for both user-facing conversational chat (`/`) and developer-facing corpus & vector diagnostic inspection (`/explorer`), eliminating duplicate Python UI runtimes and ensuring a single unified React codebase. |
 | **UI Primitives & Icons** | `Radix UI` / `shadcn/ui` + `Lucide React` | Material UI, AntD | Unstyled, fully accessible (WCAG 2.1 AA) primitives with minimal bundle footprint and full design customization. |
 | **Markdown & Syntax** | `react-markdown` + `remark-gfm` | Draft.js | Lightweight parsing of LLM markdown outputs, tables, and custom inline citation pill tokens. |
+| **Frontend Hosting & Edge CDN** | **Vercel** | AWS Amplify, Netlify | Native Next.js 15 App Router optimization, Global Edge CDN, automated PR preview deployments, zero-config SSR & streaming. |
+| **Backend Hosting & Containerization** | **Railway** | Render, Fly.io, AWS ECS | Long-lived containerized Python 3.11 runtime, native support for heavy dependencies (`torch`, `sentence-transformers`, `chromadb`), persistent/baked vector store, zero cold-start latency, auto-restart health probes. |
+| **CI/CD Automation** | **GitHub Actions** + Railway & Vercel Integrations | Jenkins, CircleCI | Unified automated test gate (pytest + Next.js build), automated preview deployments on PRs, atomic production releases on merge. |
 | **Testing & Evaluation** | `pytest` + `Ragas` (Backend) / `Vitest` + `Playwright` (Frontend) | TruLens / Cypress | Comprehensive verification across guardrail regexes, chunking integrity, SSE streaming robustness, and WCAG accessibility. |
 
 ---
@@ -974,22 +1019,40 @@ export async function POST(req: NextRequest) {
 
 ```
 rag-nutrison/
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml                       # Unified GitHub Actions pipeline (Lint, Test, Deploy)
+├── Dockerfile                              # Multi-stage production backend container for Railway
+├── .dockerignore                           # Build context exclusions
+├── railway.json                            # Railway deployment configuration & health probe
+├── Procfile                                # Web process definition for Railway
 ├── frontend/                               # Next.js 15 Web Application
+│   ├── vercel.json                         # Vercel deployment headers & streaming configuration
 │   ├── package.json                        # Frontend dependencies (Next.js 15, React 19, Tailwind)
 │   ├── tsconfig.json                       # Strict TypeScript configuration
 │   ├── tailwind.config.ts                  # Design tokens, color schemes, animations
-│   ├── next.config.ts                      # Next.js configuration & environment bindings
+│   ├── next.config.mjs                     # Next.js configuration & environment bindings
 │   ├── public/                             # Static assets, agency emblems, favicons
 │   └── src/
 │       ├── app/
 │       │   ├── layout.tsx                  # Root layout: font provider, theme, accessible meta
 │       │   ├── page.tsx                    # Main chat interface (RSC bootstrap + corpus fetch)
+│       │   ├── explorer/
+│       │   │   └── page.tsx                # Interactive Diagnostic & Corpus Explorer (React/Next.js)
 │       │   ├── globals.css                 # Tailwind directives and CSS variables
 │       │   └── api/
 │       │       ├── chat/
 │       │       │   └── route.ts            # BFF SSE streaming proxy to FastAPI /v1/chat/stream
-│       │       └── documents/
-│       │           └── route.ts            # Corpus registry metadata proxy & cache
+│       │       ├── documents/
+│       │       │   └── route.ts            # Corpus registry metadata proxy & cache
+│       │       ├── blocks/
+│       │       │   └── route.ts            # Diagnostic raw block reader proxy
+│       │       ├── chunks/
+│       │       │   └── route.ts            # Diagnostic assembled chunk inspector proxy
+│       │       ├── retrieval/debug/
+│       │       │   └── route.ts            # Diagnostic similarity debugger proxy
+│       │       └── guardrails/check/
+│       │           └── route.ts            # Diagnostic guardrail tester proxy
 │       ├── components/
 │       │   ├── chat/
 │       │   │   ├── ChatContainer.tsx       # Main chat orchestrator & conversation context
@@ -1002,7 +1065,12 @@ rag-nutrison/
 │       │   │   ├── CitationDrawer.tsx      # Slide-over flyout panel for chunk excerpts & links
 │       │   │   ├── RefusalCard.tsx         # Distinct amber (gap) & crimson (safety) refusal cards
 │       │   │   └── ChatInputArea.tsx       # Textarea, starter suggestion chips, submit/stop controls
-│       │   └── ui/                         # shadcn/ui primitives (button, badge, sheet, tooltip)
+│       │   ├── explorer/
+│       │   │   ├── BlockExplorer.tsx       # Browse 1,001 raw blocks by doc & type
+│       │   │   ├── ChunkInspector.tsx      # Inspect assembled chunks, hierarchy & tables
+│       │   │   ├── RetrievalDebugger.tsx   # Interactive query similarity tester (tau=0.53)
+│       │   │   └── GuardrailDebugger.tsx   # Live regex pattern matching sandbox
+│       │   └── ui/                         # shadcn/ui primitives (button, badge, sheet, tooltip, tabs)
 │       ├── hooks/
 │       │   ├── useChatbot.ts               # Core conversational state machine & SSE stream reader
 │       │   └── useCorpusRegistry.ts        # Hook fetching and caching the 7 corpus publications
@@ -1018,45 +1086,257 @@ rag-nutrison/
 │   ├── blocks.jsonl                        # Canonical source: 1,001 pre-parsed blocks
 │   └── vectordb/                           # Local ChromaDB persistent vector storage
 ├── doc/
-│   ├── problemStatement.txt               # Original brief
-│   ├── problemStatement.md                # Detailed functional specification
-│   └── architecture.md                    # Detailed System Architecture
+│   ├── problemStatement.txt                # Original brief
+│   ├── problemStatement.md                 # Detailed functional specification
+│   ├── architecture.md                     # Detailed System Architecture
+│   ├── implemenation-phase.md              # Multi-phase engineering roadmap
+│   └── evaluation-and-edge-cases.md        # Quality metrics & edge case benchmark
+├── scripts/
+│   ├── eval_benchmark.py                   # Automated Ragas & latency benchmark suite
+│   ├── retriever.py                        # Standalone retrieval benchmark utility
+│   ├── verify_phase6.py                    # Phase 6 diagnostic explorer test runner
+│   ├── verify_phase7.py                    # Phase 7 conversational UI test runner
+│   └── verify_deployment.py                # Post-deployment live smoke verification script
 ├── src/                                    # Python Backend & RAG Pipeline
 │   ├── __init__.py
 │   ├── api/
 │   │   ├── __init__.py
-│   │   ├── app.py                         # FastAPI gateway application
-│   │   └── routes.py                      # /v1/chat, /v1/chat/stream, /v1/documents endpoints
+│   │   ├── app.py                          # FastAPI gateway application
+│   │   └── routes.py                       # /v1/chat, /v1/chat/stream, /v1/documents endpoints
 │   ├── guardrails/
 │   │   ├── __init__.py
-│   │   ├── safety_filter.py               # Medical, calorie & weight loss deterministic block
-│   │   └── refusal_handlers.py            # Refusal 1 and Refusal 2 response formatters
+│   │   ├── safety_filter.py                # Medical, calorie & weight loss deterministic block
+│   │   └── refusal_handlers.py             # Refusal 1 and Refusal 2 response formatters
 │   ├── ingestion/
 │   │   ├── __init__.py
-│   │   ├── block_reader.py                # Reader for data/blocks.jsonl
-│   │   └── block_chunker.py               # Hierarchy and table preserving chunk assembler
+│   │   ├── block_reader.py                 # Reader for data/blocks.jsonl
+│   │   └── block_chunker.py                # Hierarchy and table preserving chunk assembler
 │   ├── retrieval/
 │   │   ├── __init__.py
-│   │   ├── vector_store.py                # ChromaDB client and index builder
-│   │   └── retriever.py                   # Global & document_id filtered dense retrieval
+│   │   ├── vector_store.py                 # ChromaDB client and index builder
+│   │   └── retriever.py                    # Global & document_id filtered dense retrieval
 │   ├── generation/
 │   │   ├── __init__.py
-│   │   ├── prompt_templates.py            # Strict grounding & citation prompts
-│   │   ├── synthesizer.py                 # LLM synthesizer with multi-document segregation
-│   │   └── citation_formatter.py          # Citation verification and syntax formatter
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py                     # Pydantic data schemas (BlockRecord, Chunk, etc.)
-│   └── ui/
-│       └── app.py                         # Optional internal Streamlit diagnostic UI
+│   │   ├── prompt_templates.py             # Strict grounding & citation prompts
+│   │   ├── synthesizer.py                  # LLM synthesizer with multi-document segregation
+│   │   └── citation_formatter.py           # Citation verification and syntax formatter
+│   └── models/
+│       ├── __init__.py
+│       └── schemas.py                      # Pydantic data schemas (BlockRecord, Chunk, etc.)
 ├── tests/
-│   ├── test_guardrails.py                 # Tests for Refusal 2 (medical/weight/calorie)
-│   ├── test_chunking.py                   # Tests for table preservation & heading continuity
-│   ├── test_retrieval.py                  # Tests for global vs. filtered retrieval
-│   ├── test_synthesis.py                  # Tests for citation formatting & Refusal 1
-│   └── test_streaming.py                  # Tests for FastAPI SSE stream outputs
-├── architecture.md                         # Root architectural specification
-├── problemStatement.md                     # Root problem statement
-├── requirements.txt                        # Backend Python dependencies
-└── README.md                               # Documentation, chunking trade-offs & startup guide
+│   ├── test_guardrails.py                  # Tests for Refusal 2 (medical/weight/calorie)
+│   ├── test_chunking.py                    # Tests for table preservation & heading continuity
+│   ├── test_retrieval.py                   # Tests for global vs. filtered retrieval
+│   ├── test_synthesis.py                   # Tests for citation formatting & Refusal 1
+│   ├── test_streaming.py                   # Tests for FastAPI SSE stream outputs
+│   ├── test_api.py                         # End-to-end FastAPI endpoint tests
+│   ├── test_edge_cases.py                  # Table integrity & query edge cases
+│   └── test_evaluation.py                  # Quantitative retrieval & citation benchmarks
+├── requirements.txt                         # Backend Python dependencies
+└── README.md                                # Documentation, chunking trade-offs & startup guide
 ```
+
+---
+
+## 10. Production Deployment Architecture & CI/CD Pipeline
+
+The Dietary Guidance RAG Chatbot employs a **Multi-Cloud Hybrid Deployment Model** pairing **Vercel** for the high-performance Next.js 15 frontend with **Railway** for the containerized Python/FastAPI backend and local vector database.
+
+```mermaid
+flowchart TB
+    subgraph Users["End Users & Browsers"]
+        Browser["User Web Browser<br/>(Desktop / Mobile)"]
+    end
+
+    subgraph VercelCloud["Vercel Cloud Platform (Frontend)"]
+        VercelCDN["Vercel Global Edge Network<br/>(Anycast CDN, SSL Termination)"]
+        NextApp["Next.js 15 App Router<br/>(React Server Components & SSR)"]
+        NextBFF["Next.js Route Handlers / BFF Gateway<br/>(/api/chat, /api/documents)<br/>(Streaming SSE Proxy, maxDuration: 60s)"]
+        VercelCDN --> NextApp --> NextBFF
+    end
+
+    subgraph RailwayCloud["Railway Cloud Platform (Backend)"]
+        RailwayLB["Railway Ingress & Load Balancer<br/>(Automatic HTTPS, Dynamic $PORT)"]
+        FastAPIService["FastAPI Gateway Container<br/>(Python 3.11, Uvicorn, 2 Workers)<br/>(CORS: *.vercel.app + Custom Domain)"]
+        
+        subgraph ContainerRuntime["Baked Container Image Filesystem"]
+            ChromaStore[("ChromaDB Persistent Store<br/>(data/vectordb - Baked)")]
+            BlocksCorpus[("Canonical Corpus Data<br/>(data/blocks.jsonl - 1,001 Blocks)")]
+            EmbeddingModel["Local SentenceTransformers<br/>(all-MiniLM-L6-v2, Offline Mode)"]
+        end
+        
+        RailwayLB --> FastAPIService
+        FastAPIService --> ChromaStore
+        FastAPIService --> BlocksCorpus
+        FastAPIService --> EmbeddingModel
+    end
+
+    subgraph ExternalLLM["External Inference Cloud"]
+        GroqCloud["Groq Cloud LPU Platform<br/>(openai/gpt-oss-120b)<br/>(Sub-30ms TTFT Streaming)"]
+    end
+
+    %% Network Flows
+    Browser -- "1. HTTPS Requests / SSE Connection" --> VercelCDN
+    NextBFF -- "2. Upstream HTTPS REST & SSE Stream (/v1/chat/stream)" --> RailwayLB
+    FastAPIService -- "3. Dense Semantic Search" --> ChromaStore
+    FastAPIService -- "4. Fast Low-Latency Generation" --> GroqCloud
+    GroqCloud -- "5. Token Chunks" --> FastAPIService
+    FastAPIService -- "6. SSE Wire Events" --> NextBFF
+    NextBFF -- "7. Chunked SSE Stream (keep-alive)" --> Browser
+```
+
+### 10.1 Multi-Cloud Hybrid Deployment Model
+
+| Layer | Provider | Technical Rationale | Operational SLA / Capabilities |
+|---|---|---|---|
+| **Frontend & BFF** | **Vercel** | • Native optimization for Next.js 15 App Router, React 19, and Server Components.<br/>• Global Anycast Edge CDN guarantees $< 50$ ms TTFB for static UI assets and cached document catalogs.<br/>• Automated preview branch deployments for every pull request.<br/>• Built-in Web Vitals telemetry, zero server maintenance, and atomic zero-downtime rollouts. | 99.99% Edge SLA, HTTP/3 & TLS 1.3, Serverless Function execution with streaming `Response(body)` pass-through. |
+| **Backend & RAG Pipeline** | **Railway** | • Non-ephemeral, long-lived containerized Python 3.11 execution environment.<br/>• Supports heavy PyTorch and `sentence-transformers` dependencies without cold-start memory or package-size penalties.<br/>• Bakes the persistent ChromaDB database (`data/vectordb`) directly into the container image, ensuring zero runtime download latency.<br/>• Native support for dynamic `$PORT` environment variable binding and automated `/v1/health` container restarts. | 99.95% Compute SLA, dedicated memory (1-2 GB RAM), automatic HTTPS endpoint (`*.up.railway.app`), integrated build logs. |
+
+### 10.2 Architectural Topology & Network Flow
+
+1. **Client to Vercel**: The user accesses the web application over secure HTTPS (`https://dietary-guidance.vercel.app`). Static assets and pre-rendered shells are served directly from Vercel Edge caches.
+2. **BFF Streaming Relay (`/api/chat` -> `/v1/chat/stream`)**:
+   - When the user sends a query, the client calls the Next.js Route Handler `/api/chat`.
+   - The BFF forwards the request payload to the Railway backend URL specified in `BACKEND_URL` (`https://<service>.up.railway.app/v1/chat/stream`).
+   - The response stream is returned with explicit streaming headers:
+     ```http
+     Content-Type: text/event-stream; charset=utf-8
+     Cache-Control: no-cache, no-transform
+     Connection: keep-alive
+     X-Accel-Buffering: no
+     ```
+   - Buffering proxies (such as Nginx or CDN caches) are instructed by `X-Accel-Buffering: no` and `no-transform` to stream each token delta to the browser immediately without accumulating bytes.
+3. **CORS Protocol**:
+   - The FastAPI backend configures `CORSMiddleware` with `allow_origin_regex=r"https:\/\/.*\.vercel\.app"`.
+   - This automatically authorizes production domains, preview PR URLs generated by Vercel, and local developer hosts (`localhost:3000`) with full credential and header support (`Content-Type`, `Authorization`).
+
+### 10.3 Front-End Deployment Architecture on Vercel
+
+#### 10.3.1 Configuration & Build Parameters
+- **Repository Root**: Monorepo root with Vercel **Root Directory** configured to `frontend`.
+- **Framework Preset**: `Next.js`.
+- **Build Command**: `npm run build` (executes `next build` with TypeScript and ESLint validation).
+- **Output Directory**: `.next`.
+- **Node.js Runtime**: `20.x`.
+- **Vercel Configuration (`frontend/vercel.json`)**:
+  - Enforces `Cache-Control: no-cache, no-transform` on `/api/chat` to guarantee immediate Server-Sent Events dispatch.
+  - Applies essential HTTP security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`).
+
+#### 10.3.2 Vercel Environment Variables Matrix
+| Variable Name | Environment | Purpose | Example Value |
+|---|---|---|---|
+| `BACKEND_URL` | Production & Preview | Resolves the upstream Railway FastAPI backend gateway | `https://nutrison-rag.up.railway.app` |
+| `NODE_ENV` | Production | Enforces React 19 production builds and optimizations | `production` |
+
+#### 10.3.3 Serverless Execution Boundaries
+- **Route Handler Timeout**: In `frontend/src/app/api/chat/route.ts`, `export const maxDuration = 60;` is declared to provide up to 60 seconds of execution time, accommodating complex multi-source inquiries without dropping connections.
+- **Dynamic Rendering**: `export const dynamic = "force-dynamic";` ensures streaming chat requests bypass static pre-rendering.
+
+---
+
+### 10.4 Back-End Deployment Architecture on Railway
+
+#### 10.4.1 Containerization Strategy (`Dockerfile`)
+The backend is packaged using a multi-stage production Docker build based on `python:3.11-slim`:
+- **Stage 1 (`builder`)**: Installs compiler tools (`build-essential`, `curl`) and builds wheels into `/root/.local`.
+- **Stage 2 (`runner`)**: Minimal runtime image copying installed packages from `builder`.
+  - Offline environment variables are pre-set: `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1`.
+  - The 1,001 canonical pre-parsed blocks (`data/blocks.jsonl`) and the pre-computed ChromaDB vector index (`data/vectordb`) are copied into the container filesystem at build time.
+  - Sub-second cold start: The container launches in $< 1.5$ seconds with zero external model or corpus downloads.
+
+#### 10.4.2 Railway Configuration & Port Binding (`railway.json` / `Procfile`)
+- **Dynamic Port Injection**: Railway assigns a random high-port at runtime via the `PORT` environment variable. `config/settings.py` binds to this via Pydantic `AliasChoices("PORT", "FASTAPI_PORT")`.
+- **Health Check Probe**: Railway monitors container liveness via `GET /v1/health` with a 60-second initialization grace period.
+- **Restart Policy**: `ON_FAILURE` with up to 5 automatic retries.
+
+#### 10.4.3 Railway Environment Variables Matrix
+| Variable Name | Required | Default / Value | Description |
+|---|---|---|---|
+| `PORT` | Auto (Railway) | Assigned dynamically | Runtime HTTP port provided by Railway platform |
+| `FASTAPI_HOST` | Yes | `0.0.0.0` | Ingress interface binding |
+| `ENVIRONMENT` | Yes | `production` | Runtime mode indicator |
+| `LLM_PROVIDER` | Yes | `groq` | Primary LLM synthesis engine |
+| `GROQ_API_KEY` | **Yes (Secret)** | `gsk_...` | Groq Cloud API credentials for LPU inference |
+| `GROQ_MODEL` | Yes | `openai/gpt-oss-120b` | Production Groq model identifier |
+| `EMBEDDING_PROVIDER` | Yes | `local` | Uses local SentenceTransformers |
+| `EMBEDDING_MODEL_NAME` | Yes | `all-MiniLM-L6-v2` | Embedding model identifier |
+| `SIMILARITY_THRESHOLD` | Yes | `0.53` | Calibrated cosine similarity threshold ($\tau$) |
+| `RETRIEVAL_TOP_K` | Yes | `6` | Top-K chunk retrieval limit |
+| `HF_HUB_OFFLINE` | Yes | `1` | Disables HuggingFace online telemetry & downloads |
+| `TRANSFORMERS_OFFLINE`| Yes | `1` | Forces SentenceTransformers to use local weights |
+| `ALLOWED_ORIGINS` | Optional | `https://*.vercel.app` | Custom production domains for CORS whitelisting |
+
+---
+
+### 10.5 Unified Continuous Integration & Continuous Delivery (CI/CD) Pipeline
+
+Continuous integration and continuous deployment are managed through **GitHub Actions** (`.github/workflows/ci-cd.yml`), orchestrating test execution, container builds, and cloud releases.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Developer
+    participant GitHub as GitHub Repository
+    participant Actions as GitHub Actions CI/CD
+    participant Railway as Railway Platform (Backend)
+    participant Vercel as Vercel Platform (Frontend)
+    participant Smoke as Smoke Verification Suite
+
+    Developer->>GitHub: git push origin main (or PR)
+    GitHub->>Actions: Trigger CI/CD Workflow (.github/workflows/ci-cd.yml)
+
+    par Parallel CI Verification
+        Actions->>Actions: Job 1: Backend CI (Python 3.11, pip install, pytest 23+ tests)
+        Actions->>Actions: Job 2: Frontend CI (Node 20, npm ci, eslint, tsc --noEmit, next build)
+    end
+
+    alt PR Trigger (Feature Branch)
+        Actions->>Vercel: Generate Preview Deployment URL
+        Vercel-->>Developer: Comment Preview URL on Pull Request
+    else Main Branch Push (Production Release)
+        Actions->>Railway: Job 3: Trigger Railway Container Deployment (CLI / Webhook)
+        Railway->>Railway: Build Docker image & pre-warm ChromaDB
+        Railway->>Railway: Execute healthcheck probe GET /v1/health
+        Railway-->>Actions: Backend Healthy (https://nutrison-rag.up.railway.app)
+
+        Actions->>Vercel: Job 4: Trigger Vercel Production Deployment
+        Vercel->>Vercel: Build Next.js 15 bundle with BACKEND_URL binding
+        Vercel->>Vercel: Atomic CDN swap to Production
+        Vercel-->>Actions: Frontend Live (https://dietary-guidance.vercel.app)
+
+        Actions->>Smoke: Job 5: Execute scripts/verify_deployment.py
+        Smoke->>Railway: Verify GET /v1/health & GET /v1/documents (7 docs)
+        Smoke->>Railway: Verify Refusal 2 Safety Guardrail at /v1/chat
+        Smoke->>Vercel: Verify Frontend Availability & BFF SSE Streaming
+        Smoke-->>Developer: All Smoke Tests Passed (Green Release)
+    end
+```
+
+#### 10.5.1 CI Quality Gates
+Before any deployment occurs, both backend and frontend suites must complete with exit code 0:
+1. **Corpus Integrity Assertion**: Ensures `data/blocks.jsonl` contains exactly 1,001 valid JSON lines without truncation.
+2. **Backend Unit & Regression Suite**: Executes `pytest` across all test modules (`test_api.py`, `test_chunking.py`, `test_guardrails.py`, `test_retrieval.py`, `test_synthesis.py`, `test_streaming.py`).
+3. **Frontend Lint & Build**: Executes ESLint and `next build` in strict mode to detect syntax errors, dead imports, or type mismatches.
+
+#### 10.5.2 Automated Deployment Triggering
+- **Railway Deployment**: Triggered either via the native **Railway GitHub App** (configured to auto-deploy branch `main`) or through the GitHub Actions workflow using `@railway/cli` with repository secret `RAILWAY_TOKEN`.
+- **Vercel Deployment**: Triggered via the **Vercel GitHub Integration** or the official Vercel CLI action (`vercel deploy --prod`), which securely pulls project credentials (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`).
+
+---
+
+### 10.6 Reliability, Observability & Secret Management
+
+1. **Zero-Downtime Rolling Deploys**:
+   - Railway spins up the new container instance, waits for the Docker healthcheck `GET /v1/health` to return HTTP 200, and only then redirects ingress traffic before shutting down the old instance.
+   - Vercel performs instant atomic CDN pointer swaps once the Next.js bundle finishes compiling.
+2. **Secret Hygiene**:
+   - API keys (`GROQ_API_KEY`) and platform tokens (`RAILWAY_TOKEN`, `VERCEL_TOKEN`) are injected exclusively via secure platform secret vaults.
+   - Zero credentials or keys are committed to Git. `.gitignore` strictly prevents `.env` and `.env.local` files from tracking.
+3. **Automated Post-Deployment Verification (`scripts/verify_deployment.py`)**:
+   - The CLI utility executes 5 sequential integration checks against the deployed URLs:
+     1. `GET /v1/health`: Verifies vector store is initialized with $> 0$ chunks.
+     2. `GET /v1/documents`: Verifies all 7 authoritative documents are registered.
+     3. `POST /v1/chat`: Verifies deterministic safety filter returns `REFUSAL_OUT_OF_SCOPE` on medical queries.
+     4. `GET /`: Verifies Next.js 15 frontend renders accessible HTML shell.
+     5. `POST /api/chat`: Verifies BFF receives Server-Sent Events stream from Railway and yields active token deltas.
+
