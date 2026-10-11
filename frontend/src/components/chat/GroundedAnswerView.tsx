@@ -89,10 +89,10 @@ export function GroundedAnswerView({
                   onSelectCitation(citationPayload);
                 }}
                 type="button"
-                className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 my-0.5 rounded-md text-[11px] font-mono font-medium bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-700/60 hover:border-indigo-500 transition-all cursor-pointer shadow-sm group focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 my-0.5 rounded-md text-[11px] font-mono font-medium bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 border border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all cursor-pointer shadow-2xs group focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 aria-label={`Citation: ${title} published by ${publisher}, ${year}. Click to inspect source excerpt.`}
               >
-                <BookOpen className="w-3 h-3 text-indigo-400 group-hover:text-indigo-200" />
+                <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform" />
                 <span className="font-sans font-semibold truncate max-w-[200px]">{title}</span>
                 <span className="opacity-60 text-[10px]">&bull; {publisher.split("/")[0].trim()}</span>
               </button>
@@ -101,16 +101,16 @@ export function GroundedAnswerView({
               <Tooltip.Content
                 side="top"
                 align="center"
-                className="z-50 max-w-xs bg-slate-900 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 shadow-2xl space-y-1 animate-in fade-in zoom-in-95 duration-100"
+                className="z-50 max-w-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl space-y-1 animate-in fade-in zoom-in-95 duration-100"
               >
-                <p className="font-semibold text-white">{title}</p>
-                <p className="text-[11px] text-indigo-300 font-mono">
+                <p className="font-semibold text-slate-900 dark:text-white">{title}</p>
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">
                   {publisher} ({year})
                 </p>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
                   Click to inspect verbatim excerpt &amp; relevance score
                 </p>
-                <Tooltip.Arrow className="fill-slate-900 border-slate-700" />
+                <Tooltip.Arrow className="fill-white dark:fill-slate-900 border-slate-200 dark:border-slate-700" />
               </Tooltip.Content>
             </Tooltip.Portal>
           </Tooltip.Root>
@@ -128,84 +128,79 @@ export function GroundedAnswerView({
   };
 
   return (
-    <div className="prose prose-invert prose-indigo max-w-none text-sm leading-relaxed">
+    <div className="prose prose-slate dark:prose-invert max-w-none text-sm leading-relaxed">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           p: ({ children }) => {
             if (typeof children === "string") {
-              return <p className="mb-3 last:mb-0">{renderContentWithPills(children)}</p>;
+              return <p className="mb-3 last:mb-0 text-slate-800 dark:text-slate-200">{renderContentWithPills(children)}</p>;
             }
             if (Array.isArray(children)) {
               return (
-                <p className="mb-3 last:mb-0">
-                  {children.map((child, idx) =>
-                    typeof child === "string" ? (
-                      <React.Fragment key={idx}>{renderContentWithPills(child)}</React.Fragment>
-                    ) : (
-                      child
-                    )
+                <p className="mb-3 last:mb-0 text-slate-800 dark:text-slate-200">
+                  {React.Children.map(children, (child) =>
+                    typeof child === "string" ? renderContentWithPills(child) : child
                   )}
                 </p>
               );
             }
-            return <p className="mb-3 last:mb-0">{children}</p>;
+            return <p className="mb-3 last:mb-0 text-slate-800 dark:text-slate-200">{children}</p>;
           },
           h1: ({ children }) => (
-            <h1 className="text-lg font-bold text-slate-100 mt-4 mb-2 border-b border-slate-800 pb-1">
+            <h1 className="text-base font-bold text-slate-900 dark:text-white mt-4 mb-2">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-base font-bold text-slate-100 mt-4 mb-2">
+            <h2 className="text-sm font-bold text-emerald-800 dark:text-emerald-300 mt-4 mb-2 pb-1 border-b border-slate-200 dark:border-slate-800">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-sm font-semibold text-indigo-300 mt-3 mb-1.5 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-3 mb-1.5">
               {children}
             </h3>
           ),
           ul: ({ children }) => (
-            <ul className="list-disc list-outside pl-5 space-y-1 mb-3 text-slate-200">
+            <ul className="list-disc list-inside space-y-1 mb-3 text-slate-700 dark:text-slate-300">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-outside pl-5 space-y-1 mb-3 text-slate-200">
+            <ol className="list-decimal list-inside space-y-1 mb-3 text-slate-700 dark:text-slate-300">
               {children}
             </ol>
           ),
-          li: ({ children }) => {
-            if (typeof children === "string") {
-              return <li>{renderContentWithPills(children)}</li>;
-            }
-            return <li>{children}</li>;
-          },
+          li: ({ children }) => (
+            <li className="leading-relaxed">{children}</li>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold text-slate-900 dark:text-slate-100">{children}</strong>
+          ),
           table: ({ children }) => (
-            <div className="overflow-x-auto my-3 border border-slate-800 rounded-xl">
-              <table className="w-full text-left text-xs border-collapse">
+            <div className="overflow-x-auto my-3 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-xs text-left">
                 {children}
               </table>
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="bg-slate-800/90 text-slate-200 uppercase font-mono border-b border-slate-700">
+            <thead className="bg-slate-100 dark:bg-slate-850 font-semibold text-slate-800 dark:text-slate-200">
               {children}
             </thead>
           ),
-          th: ({ children }) => (
-            <th className="p-2.5 border-r border-slate-700 last:border-r-0 font-semibold">
+          tbody: ({ children }) => (
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900/60">
               {children}
-            </th>
+            </tbody>
           ),
+          th: ({ children }) => <th className="px-3 py-2.5">{children}</th>,
           td: ({ children }) => (
-            <td className="p-2.5 border-b border-r border-slate-800 last:border-r-0 text-slate-300">
-              {children}
-            </td>
+            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{children}</td>
           ),
           code: ({ children }) => (
-            <code className="bg-slate-900 text-indigo-300 px-1.5 py-0.5 rounded text-xs font-mono border border-slate-800">
+            <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-xs text-emerald-700 dark:text-emerald-400">
               {children}
             </code>
           ),

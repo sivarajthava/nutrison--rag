@@ -24,9 +24,9 @@ export function ScopeSelector({
       <div className="flex items-center justify-between">
         <label
           id="evidence-scope-label"
-          className="text-xs font-medium text-slate-400 flex items-center gap-1.5"
+          className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5"
         >
-          <Filter className="w-3.5 h-3.5 text-indigo-400" />
+          <Filter className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           <span>Evidence Scope:</span>
         </label>
 
@@ -41,36 +41,36 @@ export function ScopeSelector({
               type="button"
               onClick={() => onSelectCategory(null)}
               aria-pressed={selectedCategory === null}
-              className={`px-2 py-0.5 rounded transition focus:outline-none focus:ring-1 focus:ring-indigo-400 ${
+              className={`px-2 py-0.5 rounded transition focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                 selectedCategory === null
-                  ? "bg-slate-800 text-slate-200 font-semibold"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-200 font-semibold"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               All Topics
             </button>
-            <span className="text-slate-700" aria-hidden="true">&bull;</span>
+            <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">&bull;</span>
             <button
               type="button"
               onClick={() => onSelectCategory("food_safety")}
               aria-pressed={selectedCategory === "food_safety"}
-              className={`px-2 py-0.5 rounded transition focus:outline-none focus:ring-1 focus:ring-emerald-400 ${
+              className={`px-2 py-0.5 rounded transition focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                 selectedCategory === "food_safety"
-                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-semibold"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-semibold"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               Food Safety
             </button>
-            <span className="text-slate-700" aria-hidden="true">&bull;</span>
+            <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">&bull;</span>
             <button
               type="button"
               onClick={() => onSelectCategory("nutrition")}
               aria-pressed={selectedCategory === "nutrition"}
-              className={`px-2 py-0.5 rounded transition focus:outline-none focus:ring-1 focus:ring-indigo-400 ${
+              className={`px-2 py-0.5 rounded transition focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                 selectedCategory === "nutrition"
-                  ? "bg-indigo-950 text-indigo-300 border border-indigo-800/60 font-semibold"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-semibold"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               Nutrition
@@ -90,10 +90,10 @@ export function ScopeSelector({
           role="radio"
           aria-checked={selectedDocId === null}
           onClick={() => onSelect(null)}
-          className={`text-xs px-3 py-1.5 rounded-full border transition flex items-center gap-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+          className={`text-xs px-3 py-1.5 rounded-full border transition flex items-center gap-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
             selectedDocId === null
-              ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
-              : "bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-850 hover:text-slate-200"
+              ? "bg-emerald-600 text-white border-emerald-500 shadow-xs"
+              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 hover:text-emerald-700 dark:hover:text-emerald-300"
           }`}
         >
           <Globe className="w-3 h-3" />
@@ -102,15 +102,7 @@ export function ScopeSelector({
 
         {documents.map((doc) => {
           const isSelected = selectedDocId === doc.document_id;
-          const publisherShort = doc.publisher.includes("WHO")
-            ? "WHO"
-            : doc.publisher.includes("FDA")
-            ? "FDA"
-            : doc.publisher.includes("USDA")
-            ? "USDA"
-            : doc.publisher.includes("UK")
-            ? "UK FSA / PHE"
-            : doc.publisher;
+          const shortTitle = doc.title.length > 28 ? `${doc.title.slice(0, 26)}...` : doc.title;
 
           return (
             <button
@@ -119,39 +111,32 @@ export function ScopeSelector({
               role="radio"
               aria-checked={isSelected}
               onClick={() => onSelect(isSelected ? null : doc.document_id)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition flex items-center gap-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+              className={`text-xs px-2.5 py-1.5 rounded-full border transition font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                 isSelected
-                  ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
-                  : "bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-850 hover:text-slate-100"
+                  ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700 shadow-xs font-semibold"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 hover:text-emerald-700 dark:hover:text-emerald-300"
               }`}
+              title={`${doc.title} (${doc.publisher}, ${doc.year})`}
             >
-              <span>{doc.title.split(":")[0].slice(0, 24)}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                  isSelected
-                    ? "bg-indigo-800 text-indigo-100"
-                    : "bg-slate-800 text-slate-400"
-                }`}
-              >
-                {publisherShort} &apos;{String(doc.year).slice(-2)}
-              </span>
+              <span>{shortTitle}</span>
+              <span className="opacity-60 text-[10px] ml-1 font-mono">({doc.year})</span>
             </button>
           );
         })}
       </div>
 
-      {/* Mobile Select Dropdown */}
+      {/* Mobile Dropdown Select */}
       <div className="sm:hidden">
         <select
-          value={selectedDocId || "global"}
-          onChange={(e) => onSelect(e.target.value === "global" ? null : e.target.value)}
-          aria-label="Select authoritative publication scope"
-          className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+          value={selectedDocId || ""}
+          onChange={(e) => onSelect(e.target.value ? e.target.value : null)}
+          aria-label="Filter evidence scope by authoritative publication"
+          className="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
         >
-          <option value="global">All 7 Publications (Global Evidence)</option>
+          <option value="">All 7 Publications (Global Evidence Scope)</option>
           {documents.map((doc) => (
             <option key={doc.document_id} value={doc.document_id}>
-              {doc.title} ({doc.publisher.split("/")[0].trim()})
+              {doc.title} ({doc.year})
             </option>
           ))}
         </select>

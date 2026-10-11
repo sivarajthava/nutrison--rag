@@ -62,6 +62,7 @@ export interface CitationItem {
   chunk_id?: string | null;
   verbatim_text?: string | null;
   similarity_score?: number | null;
+  hierarchy_path?: string[] | null;
 }
 
 export interface GroundedSectionItem {
@@ -140,4 +141,14 @@ export interface GuardrailCheckResult {
   category?: string | null;
   pattern_matched?: string | null;
   message: string;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: ChatMessage[];
+  documentFilter?: string | null;
+  categoryFilter?: "nutrition" | "food_safety" | null;
 }
