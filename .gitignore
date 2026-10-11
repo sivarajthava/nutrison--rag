@@ -34,7 +34,7 @@ ENV/
 env/
 
 # Environment Variables
-.env
+#.env
 !.env.example
 
 # Vector DB & Storage artifacts
