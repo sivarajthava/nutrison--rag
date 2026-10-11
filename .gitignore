@@ -39,6 +39,7 @@ env/
 
 # Vector DB & Storage artifacts
 data/vectordb/
+data/models/
 *.chroma/
 
 # Testing & Coverage

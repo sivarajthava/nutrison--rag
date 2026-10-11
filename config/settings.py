@@ -52,6 +52,10 @@ class Settings(BaseSettings):
         default="all-MiniLM-L6-v2",
         description="Embedding model identifier: 'all-MiniLM-L6-v2' (local) or 'text-embedding-004' (gemini)."
     )
+    LOCAL_MODEL_DIR: str = Field(
+        default="data/models/all-MiniLM-L6-v2",
+        description="Local directory path for offline sentence-transformers embedding model."
+    )
 
     # LLM Provider configuration (Groq by default)
     LLM_PROVIDER: Literal["groq", "gemini"] = Field(
@@ -115,6 +119,11 @@ class Settings(BaseSettings):
     def get_corpus_registry_path(self) -> Path:
         """Resolve absolute path to config/corpus_registry.yaml."""
         path = Path(self.CORPUS_REGISTRY_PATH)
+        return path if path.is_absolute() else PROJECT_ROOT / path
+
+    def get_local_model_path(self) -> Path:
+        """Resolve absolute path to local offline embedding model directory."""
+        path = Path(self.LOCAL_MODEL_DIR)
         return path if path.is_absolute() else PROJECT_ROOT / path
 
 

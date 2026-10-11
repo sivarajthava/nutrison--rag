@@ -24,10 +24,6 @@ from src.api.routes import router
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Pre-warm vector store and validate authoritative corpus registry on startup."""
-    # Ensure offline mode for sentence-transformers to avoid SSL retries
-    os.environ.setdefault("HF_HUB_OFFLINE", "1")
-    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-
     # 1. Validate corpus registry
     registry = get_corpus_registry()
     print(f"[FastAPI Lifespan] Loaded {len(registry)} authoritative documents from corpus registry.")

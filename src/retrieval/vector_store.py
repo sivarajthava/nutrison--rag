@@ -76,12 +76,31 @@ def get_embedding_function(
             model_name=m_name if "text-embedding" in m_name else "text-embedding-004",
         )
     else:
-        # Default local SentenceTransformers - use local cache to avoid SSL retry delays
-        os.environ.setdefault("HF_HUB_OFFLINE", "1")
-        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-        return SentenceTransformerEmbeddingFunction(
-            model_name=m_name if m_name != "text-embedding-004" else "all-MiniLM-L6-v2"
+        # Check for local offline model directory
+        local_dir = settings.get_local_model_path()
+        if local_dir.is_dir() and (local_dir / "modules.json").exists():
+            # Fully offline from local directory - zero network calls to HuggingFace
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+            return SentenceTransformerEmbeddingFunction(
+                model_name=str(local_dir.resolve())
+            )
+
+        # Fallback to model identifier (e.g. from HuggingFace cache or auto-download)
+        target_model = m_name if m_name != "text-embedding-004" else "all-MiniLM-L6-v2"
+        ef = SentenceTransformerEmbeddingFunction(
+            model_name=target_model
         )
+
+        # Cache downloaded model locally for subsequent 100% offline runs
+        try:
+            if hasattr(ef, "_model") and ef._model is not None:
+                local_dir.mkdir(parents=True, exist_ok=True)
+                ef._model.save(str(local_dir))
+        except Exception:
+            pass
+
+        return ef
 
 
 class VectorStoreManager:

@@ -14,10 +14,6 @@ import argparse
 from pathlib import Path
 from typing import Optional, List
 
-# Suppress slow HF hub network/SSL retries when model is already cached locally
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
-os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:

@@ -17,6 +17,10 @@ COPY requirements.txt .
 # Install dependencies into local user wheel cache
 RUN pip install --no-cache-dir --user -r requirements.txt
 
+# Pre-download embedding model weights during build for strict offline runtime
+ENV PATH=/root/.local/bin:$PATH
+RUN python -c "from sentence_transformers import SentenceTransformer; m = SentenceTransformer('all-MiniLM-L6-v2'); m.save('/build/models/all-MiniLM-L6-v2')"
+
 
 # Stage 2: Production Minimal Runtime
 FROM python:3.11-slim AS runner
@@ -43,6 +47,9 @@ ENV ENVIRONMENT=production
 COPY config/ ./config/
 COPY data/ ./data/
 COPY src/ ./src/
+
+# Ensure pre-downloaded offline embedding model weights are in place
+COPY --from=builder /build/models/ /app/data/models/
 
 # Railway dynamically injects $PORT at runtime (defaults to 8000)
 ENV PORT=8000

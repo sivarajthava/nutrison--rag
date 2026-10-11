@@ -23,10 +23,6 @@ import argparse
 import statistics
 from typing import List, Dict, Any, Optional
 
-# Force offline mode for Hugging Face Hub to prevent external network retry delays
-os.environ["HF_HUB_OFFLINE"] = "1"
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
-
 # Add project root to sys.path
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
