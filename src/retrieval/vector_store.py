@@ -79,11 +79,11 @@ def get_embedding_function(
         # Check for local offline model directory
         local_dir = settings.get_local_model_path()
         if local_dir.is_dir() and (local_dir / "modules.json").exists():
-            # Fully offline from local directory - zero network calls to HuggingFace
             os.environ.setdefault("HF_HUB_OFFLINE", "1")
             os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
             return SentenceTransformerEmbeddingFunction(
                 model_name=str(local_dir.resolve())
+            # Fully offlineIs from local directory - zero network calls to HuggingFace
             )
 
         # Fallback to model identifier (e.g. from HuggingFace cache or auto-download)
