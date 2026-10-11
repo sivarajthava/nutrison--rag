@@ -54,7 +54,7 @@ class GroundedSynthesizer:
         if self._async_groq_client is None and self.api_key:
             try:
                 from groq import AsyncGroq
-                self._async_groq_client = AsyncGroq(api_key=self.api_key)
+                self._async_groq_client = AsyncGroq(api_key=self.api_key, timeout=15.0)
             except Exception:
                 self._async_groq_client = None
         return self._async_groq_client
