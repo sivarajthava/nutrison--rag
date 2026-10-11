@@ -38,9 +38,9 @@ env/
 !.env.example
 
 # Vector DB & Storage artifacts
-data/vectordb/
-data/models/
-*.chroma/
+#data/vectordb/
+#data/models/
+#*.chroma/
 
 # Testing & Coverage
 .pytest_cache/
